@@ -1,12 +1,13 @@
 
 import sqlite3
 import matplotlib.pyplot as plt
+import numpy as np
 
 def function_a(alpha,beta,gamma):
-    return alpha+2*beta+gamma
+    return -alpha-2*beta-2*gamma+6
     
 def function_b(alpha,beta,gamma):
-    return alpha-2*beta - 2*gamma
+    return alpha-2*beta+gamma
 
 def function_c(alpha,beta,gamma):
     return alpha-3*gamma/beta
@@ -85,14 +86,35 @@ def run_experiment():
 
 def plot_experiment():
     connection = sqlite3.connect('mockup-experiment.db')
-    connection.row_factory = sqlite3.Row
+    connection.row_factory = sqlite3.Row  
     cursor = connection.cursor()
     cursor.execute('SELECT * FROM experiment')
     experiment_rows = cursor.fetchall()
-    for experiment in experiment_rows:
-        cursor.execute('SELECT')
+    fig, axs = plt.subplots(len(experiment_rows))
+    trend = lambda a,b: np.poly1d(np.polyfit(a, b, 1))(a)
+    colors = ['#f00000','#00f000','#0000f0']
+    markers = ['o','*','x']
+    for i in range(len(experiment_rows)):
+        axs[i].set_title(experiment_rows[i]['name'])
+        axs[i].set_xlabel(experiment_rows[i]['description'])
+        cursor.execute('SELECT * FROM fact WHERE experiment = ?', (i+1,))
+        fact_rows = list(cursor.fetchall())
+        varie_variable = ['alpha','beta','gamma'].index(experiment_rows[i]['variable']) + 1
+        x_axis = [f[varie_variable] for f in fact_rows]
+        for j in range(3):
+            y_axis = [f[j+4] for f in fact_rows]
+            axs[i].scatter(x_axis, y_axis, color=colors[j], marker=markers[j])
+            axs[i].plot(x_axis,trend(x_axis, y_axis), c=colors[j], ls ='--')
+    fig.tight_layout()
+    try:
+        plt.show()
+    except:
+        plt.savefig("plot.png")
+
+
+    connection.commit()
     connection.close()
-    connection.close()
-# database_intialize()
-# prepare_experiment()
-# run_experiment()
+#database_intialize()
+#prepare_experiment()
+#run_experiment()
+plot_experiment()
